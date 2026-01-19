@@ -21,9 +21,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-public class claim {
+public class ClaimCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("claim").executes(claim::run));
+        dispatcher.register(Commands.literal("claim").executes(ClaimCommand::run));
     }
 
     static void claimDaily(CommandContext<CommandSourceStack> context, ServerPlayer player) {
@@ -31,8 +31,6 @@ public class claim {
         LootParams params = new LootParams.Builder(player.level())
                 .create(LootContextParamSets.EMPTY);
         List<ItemStack> results = table.getRandomItems(params);
-
-        BriggsDaily.LOGGER.info(results.toString());
 
         context.getSource().sendSuccess(() -> Component.literal("Claimeaste tu daily!"), false);
         PlayerCacheTracker.recordClaim(player.getStringUUID());
@@ -65,10 +63,15 @@ public class claim {
             return 1;
         }
 
+        if (data.lastClaim.equals("Never")) {
+            claimDaily(context, player);
+            return 1;
+        }
+
         Instant lastTime = Instant.parse(data.lastClaim);
         Instant okTime = lastTime.plus(1L, ChronoUnit.DAYS);
 
-        if (data.lastClaim.equals("Never") || now.isAfter(okTime)) {
+        if (now.isAfter(okTime)) {
             claimDaily(context, player);
             return 1;
         }

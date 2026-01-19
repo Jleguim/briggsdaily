@@ -1,6 +1,6 @@
 package briggs.briggsdaily;
 
-import briggs.briggsdaily.commands.briggsdaily;
+import briggs.briggsdaily.commands.BriggsDailyCommand;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.fabricmc.api.ModInitializer;
 
@@ -11,11 +11,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.CloseableResourceManager;
-import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import briggs.briggsdaily.commands.claim;
+import briggs.briggsdaily.commands.ClaimCommand;
 
 public class BriggsDaily implements ModInitializer {
     public static final String MOD_ID = "briggsdaily";
@@ -52,8 +51,8 @@ public class BriggsDaily implements ModInitializer {
         });
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            claim.register(dispatcher);
-            briggsdaily.register(dispatcher, registryAccess);
+            ClaimCommand.register(dispatcher);
+            BriggsDailyCommand.register(dispatcher, registryAccess);
         });
     }
 }

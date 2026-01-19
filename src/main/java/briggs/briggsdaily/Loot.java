@@ -42,9 +42,12 @@ public class Loot {
     public static void load(String json) {
         try {
             config = GSON.fromJson(json, LootConfig.class);
+            if (config == null) config = new LootConfig();
         } catch (Exception e) {
             e.printStackTrace();
+            config = new LootConfig();
         }
+        updatePool();
     }
 
     public static void load() {
@@ -60,7 +63,7 @@ public class Loot {
                 defaults.entries.add(diamond);
 
                 LootEntryConfig emerald = new LootEntryConfig();
-                emerald.item = "minecraft:entry";
+                emerald.item = "minecraft:emerald";
                 emerald.weight = 2;
                 emerald.count = 1;
                 defaults.entries.add(emerald);
@@ -70,6 +73,7 @@ public class Loot {
             } else {
                 try (Reader reader = Files.newBufferedReader(LOOT_PATH)) {
                     config = GSON.fromJson(reader, LootConfig.class);
+                    if (config == null) config = new LootConfig();
                 }
             }
         } catch (Exception e) {
@@ -82,10 +86,14 @@ public class Loot {
 
     public static void updatePool() {
         LootPool.Builder pool = LootPool.lootPool().setRolls(ConstantValue.exactly(1));
+        if (config == null) config = new LootConfig();
         for (LootEntryConfig entry : config.entries) {
             Identifier identifier = Identifier.tryParse(entry.item);
             Item item = BuiltInRegistries.ITEM.getOptional(identifier).orElse(null);
-            if (item == Items.AIR || item == null) continue;
+            if (item == null || item == Items.AIR) {
+                BriggsDaily.LOGGER.warn("Invalid loot item identifier: {} (skipping)", entry.item);
+                continue;
+            }
             pool.add(LootItem.lootTableItem(item)
                     .setWeight(entry.weight)
                     .apply(SetItemCountFunction.setCount(ConstantValue.exactly(entry.count))));
@@ -105,6 +113,7 @@ public class Loot {
     }
 
     public static void addEntry(String item, int weight, int count) {
+        if (config == null) config = new LootConfig();
         LootEntryConfig entry = new LootEntryConfig();
         entry.item = item;
         entry.weight = weight;
@@ -166,6 +175,7 @@ public class Loot {
     }
 
     public static LootConfig getConfig() {
+
         return config;
     }
 }

@@ -3,9 +3,7 @@ package briggs.briggsdaily.commands;
 import briggs.briggsdaily.BriggsDaily;
 import briggs.briggsdaily.Config;
 import briggs.briggsdaily.Loot;
-import com.google.gson.GsonBuilder;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -13,7 +11,6 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.item.ItemArgument;
-import net.minecraft.commands.arguments.item.ItemInput;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
@@ -22,7 +19,7 @@ import net.minecraft.world.item.Item;
 import java.util.HashMap;
 import java.util.Map;
 
-public class briggsdaily {
+public class BriggsDailyCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess) {
         dispatcher.register(
                 Commands.literal("briggsdaily")
@@ -30,26 +27,26 @@ public class briggsdaily {
                         .then(Commands.literal("loot")
                                 .then(Commands.literal("set")
                                         .then(Commands.argument("json", StringArgumentType.string())
-                                                .executes(briggsdaily::setLoot)))
+                                                .executes(BriggsDailyCommand::setLoot)))
                                 .then(Commands.literal("add")
                                         .then(Commands.argument("item", ItemArgument.item(registryAccess))
                                                 .then(Commands.argument("weight", IntegerArgumentType.integer(1))
                                                         .then(Commands.argument("count", IntegerArgumentType.integer(1))
-                                                                .executes(briggsdaily::addLoot)))))
+                                                                .executes(BriggsDailyCommand::addLoot)))))
                                 .then(Commands.literal("remove")
                                         .then(Commands.argument("item", ItemArgument.item(registryAccess))
                                                 .then(Commands.argument("index", IntegerArgumentType.integer(0))
-                                                        .executes(briggsdaily::removeLoot))))
+                                                        .executes(BriggsDailyCommand::removeLoot))))
                                 .then(Commands.literal("edit")
                                         .then(Commands.argument("item", ItemArgument.item(registryAccess))
                                                 .then(Commands.argument("index", IntegerArgumentType.integer(0))
                                                         .then(Commands.argument("weight", IntegerArgumentType.integer(1))
                                                                 .then(Commands.argument("count", IntegerArgumentType.integer(1))
-                                                                        .executes(briggsdaily::editLoot))))))
-                                .executes(briggsdaily::showLoot))
+                                                                        .executes(BriggsDailyCommand::editLoot))))))
+                                .executes(BriggsDailyCommand::showLoot))
                         .then(Commands.literal("playtime")
                                 .then(Commands.argument("minutes", IntegerArgumentType.integer())
-                                        .executes(briggsdaily::setPlaytime)))
+                                        .executes(BriggsDailyCommand::setPlaytime)))
         );
 
     }
@@ -80,9 +77,7 @@ public class briggsdaily {
 
     static int setLoot(CommandContext<CommandSourceStack> context) {
         String json = StringArgumentType.getString(context, "json");
-        BriggsDaily.LOGGER.info(json);
         Loot.load(json);
-        BriggsDaily.LOGGER.info(Loot.getConfig().toString());
         Loot.save();
         context.getSource().sendSuccess(() -> Component.literal("Loot config updated."), false);
         return 1;
