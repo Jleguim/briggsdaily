@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PlayerCacheTracker {
+public class PlayerTracker {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CACHE_PATH = FabricLoader.getInstance().getConfigDir().resolve("briggsdaily/player_cache.json");
     private static PlayerCache data;

@@ -16,7 +16,7 @@ public class Config {
     public static void load() {
         try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
             props.load(reader);
-        } catch (IOException e) { // If file doesn't exist, create defaults
+        } catch (IOException e) {
             setDefaults();
             save();
         }

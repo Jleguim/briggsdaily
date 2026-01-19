@@ -2,7 +2,7 @@ package briggs.briggsdaily.commands;
 
 import briggs.briggsdaily.Config;
 import briggs.briggsdaily.Loot;
-import briggs.briggsdaily.PlayerCacheTracker;
+import briggs.briggsdaily.PlayerTracker;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -26,13 +26,13 @@ public class ClaimCommand {
     }
 
     static void claimDaily(CommandContext<CommandSourceStack> context, ServerPlayer player) {
-        LootTable table = Loot.getLootTable();
+        LootTable table = Loot.lootTable;
         LootParams params = new LootParams.Builder(player.level())
                 .create(LootContextParamSets.EMPTY);
         List<ItemStack> results = table.getRandomItems(params);
 
-        context.getSource().sendSuccess(() -> Component.literal("Claimeaste tu daily!"), false);
-        PlayerCacheTracker.recordClaim(player.getStringUUID());
+        context.getSource().sendSuccess(() -> Component.literal("Claimeaste tu daily! " + results), false);
+        PlayerTracker.recordClaim(player.getStringUUID());
 
         for (ItemStack reward : results) {
             player.addItem(reward);
@@ -40,10 +40,14 @@ public class ClaimCommand {
     }
 
     static int run(CommandContext<CommandSourceStack> context) {
+        if (Loot.config.entries.isEmpty()) {
+            return 1;
+        }
+
         ServerPlayer player = context.getSource().getPlayer();
         assert player != null;
 
-        PlayerCacheTracker.PlayerData data = PlayerCacheTracker.getOrCreate(player.getStringUUID());
+        PlayerTracker.PlayerData data = PlayerTracker.getOrCreate(player.getStringUUID());
         boolean isOp = player.permissions().hasPermission(Permissions.COMMANDS_ADMIN);
         // isOp =  context.getSource().getServer().getPlayerList().isOp(new NameAndId(player.getGameProfile()));
 

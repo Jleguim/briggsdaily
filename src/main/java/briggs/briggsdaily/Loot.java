@@ -2,14 +2,22 @@ package briggs.briggsdaily;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.commands.arguments.item.ItemInput;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.SetComponentsFunction;
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 
@@ -22,53 +30,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Loot {
-    private static final Path LOOT_PATH =
-            FabricLoader.getInstance().getConfigDir().resolve("briggsdaily/loot.json");
+    private static final Path LOOT_PATH = FabricLoader.getInstance().getConfigDir().resolve("briggsdaily/loot.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public static class LootEntryConfig {
-        public String item;
         public int weight = 1;
         public int count = 1;
+        public JsonElement stackJson;
     }
 
     public static class LootConfig {
         public List<LootEntryConfig> entries = new ArrayList<>();
     }
 
-    private static LootConfig config;
-    private static LootTable lootTable;
+    public static LootConfig config;
+    public static LootTable lootTable;
 
-    public static void load(String json) {
-        try {
-            config = GSON.fromJson(json, LootConfig.class);
-            if (config == null) config = new LootConfig();
-        } catch (Exception e) {
-            e.printStackTrace();
-            config = new LootConfig();
-        }
-        updatePool();
-    }
-
-    public static void load() {
+    public static void load(RegistryAccess registryAccess) {
         try {
             if (!Files.exists(LOOT_PATH)) {
                 Files.createDirectories(LOOT_PATH.getParent());
-
-                LootConfig defaults = new LootConfig();
-                LootEntryConfig diamond = new LootEntryConfig();
-                diamond.item = "minecraft:diamond";
-                diamond.weight = 1;
-                diamond.count = 1;
-                defaults.entries.add(diamond);
-
-                LootEntryConfig emerald = new LootEntryConfig();
-                emerald.item = "minecraft:emerald";
-                emerald.weight = 2;
-                emerald.count = 1;
-                defaults.entries.add(emerald);
-
-                config = defaults;
+                config = new LootConfig();
                 save();
             } else {
                 try (Reader reader = Files.newBufferedReader(LOOT_PATH)) {
@@ -81,24 +63,40 @@ public class Loot {
             config = new LootConfig();
         }
 
-        updatePool();
+        updatePool(registryAccess);
     }
 
-    public static void updatePool() {
+    public static void updatePool(RegistryAccess registryAccess) {
+        if (registryAccess == null) {
+            BriggsDaily.LOGGER.warn("RegistryAccess not available, skipping loot pool build");
+            return;
+        }
+
         LootPool.Builder pool = LootPool.lootPool().setRolls(ConstantValue.exactly(1));
         if (config == null) config = new LootConfig();
+
         for (LootEntryConfig entry : config.entries) {
-            Identifier identifier = Identifier.tryParse(entry.item);
-            Item item = BuiltInRegistries.ITEM.getOptional(identifier).orElse(null);
-            if (item == null || item == Items.AIR) {
-                BriggsDaily.LOGGER.warn("Invalid loot item identifier: {} (skipping)", entry.item);
+            ItemStack stack = ItemStackSerializer.decode(entry.stackJson, registryAccess);
+            if (stack.isEmpty()) {
+                BriggsDaily.LOGGER.warn("Decoded empty stack for entry {}, skipping", entry.stackJson);
                 continue;
             }
-            pool.add(LootItem.lootTableItem(item)
+
+            LootItem.Builder lootItemBuilder = LootItem.lootTableItem(stack.getItem())
                     .setWeight(entry.weight)
-                    .apply(SetItemCountFunction.setCount(ConstantValue.exactly(entry.count))));
+                    .apply(SetItemCountFunction.setCount(ConstantValue.exactly(stack.getCount())));
+
+            stack.getComponents()
+                    .forEach(comp -> applyComponent(lootItemBuilder, comp));
+
+            pool.add(lootItemBuilder);
         }
+
         lootTable = LootTable.lootTable().withPool(pool).build();
+    }
+
+    private static <T> void applyComponent(LootItem.Builder builder, TypedDataComponent<T> comp) {
+        builder.apply(SetComponentsFunction.setComponent(comp.type(), comp.value()));
     }
 
     public static void save() {
@@ -112,70 +110,80 @@ public class Loot {
         }
     }
 
-    public static void addEntry(String item, int weight, int count) {
+    public static void addEntry(ItemInput itemInput, int weight, int count, RegistryAccess registryAccess) {
+        if (config == null) config = new LootConfig();
+        try {
+            ItemStack stack = itemInput.createItemStack(count, false);
+            addEntry(stack, weight, count, registryAccess);
+        } catch (CommandSyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void addEntry(ItemStack stack, int weight, int count, RegistryAccess registryAccess) {
         if (config == null) config = new LootConfig();
         LootEntryConfig entry = new LootEntryConfig();
-        entry.item = item;
         entry.weight = weight;
         entry.count = count;
+        entry.stackJson = ItemStackSerializer.encode(stack, registryAccess);
+
         config.entries.add(entry);
-        updatePool();
+        updatePool(registryAccess);
         save();
     }
 
-    public static void editEntry(String itemId, int index, int newWeight, int newCount) {
-        if (config == null) {
-            config = new LootConfig();
-        } // Find all entries with this item
-        List<LootEntryConfig> matches = new ArrayList<>();
-        for (LootEntryConfig entry : config.entries) {
-            if (itemId.equalsIgnoreCase(entry.item)) {
-                matches.add(entry);
-            }
-        }
-        if (index < 0 || index >= matches.size()) {
-            return;
-        }
+    public static void deleteEntry(int index, RegistryAccess registryAccess) {
+        if (config == null) config = new LootConfig();
 
-        LootEntryConfig target = matches.get(index);
-        target.weight = newWeight;
-        target.count = newCount;
+        config.entries.remove(index);
 
-        updatePool();
-
+        updatePool(registryAccess);
         save();
     }
 
-    public static void removeEntry(String itemId, int index) {
-        if (config == null) {
-            config = new LootConfig();
-        }
+    public static void editEntry(ItemStack stack, int index, RegistryAccess registryAccess) {
+        if (config == null) config = new LootConfig();
 
-        List<LootEntryConfig> matches = new ArrayList<>();
-        for (LootEntryConfig entry : config.entries) {
-            if (itemId.equalsIgnoreCase(entry.item)) {
-                matches.add(entry);
-            }
-        }
+        LootEntryConfig target = config.entries.get(index);
+        target.stackJson = ItemStackSerializer.encode(stack, registryAccess);
 
-        if (index < 0 || index >= matches.size()) {
-            return;
-        }
-
-        LootEntryConfig target = matches.get(index);
-        config.entries.removeIf(entry -> entry.equals(target));
-
-        updatePool();
+        updatePool(registryAccess);
         save();
     }
 
+    public static void editEntry(ItemInput itemInput, int index, RegistryAccess registryAccess) {
+        if (config == null) config = new LootConfig();
 
-    public static LootTable getLootTable() {
-        return lootTable;
+        LootEntryConfig target = config.entries.get(index);
+
+        try {
+            ItemStack stack = itemInput.createItemStack(target.count, false);
+            target.stackJson = ItemStackSerializer.encode(stack, registryAccess);
+        } catch (CommandSyntaxException e) {
+            e.printStackTrace();
+        }
     }
 
-    public static LootConfig getConfig() {
+    public static void editEntry(int index, int weight, int count, RegistryAccess registryAccess) {
+        if (config == null) config = new LootConfig();
 
-        return config;
+        LootEntryConfig target = config.entries.get(index);
+        target.weight = weight;
+        target.count = count;
+
+        updatePool(registryAccess);
+        save();
+    }
+
+    public static void editEntry(ItemStack stack, int index, int weight, int count, RegistryAccess registryAccess) {
+        if (config == null) config = new LootConfig();
+
+        LootEntryConfig target = config.entries.get(index);
+        target.weight = weight;
+        target.count = count;
+        target.stackJson = ItemStackSerializer.encode(stack, registryAccess);
+
+        updatePool(registryAccess);
+        save();
     }
 }
