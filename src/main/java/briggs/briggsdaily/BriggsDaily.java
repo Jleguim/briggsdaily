@@ -29,6 +29,8 @@ public class BriggsDaily implements ModInitializer {
             Loot.updatePool(server.registryAccess());
             PlayerTracker.load();
             Config.load();
+
+            LOGGER.info("Loaded configs, cache and loot!");
         });
 
 
@@ -38,6 +40,8 @@ public class BriggsDaily implements ModInitializer {
                 Loot.updatePool(server.registryAccess());
                 PlayerTracker.load();
                 Config.load();
+
+                LOGGER.info("Reloaded configs, cache and loot!");
             }
         });
 
