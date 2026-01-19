@@ -1,6 +1,5 @@
 package briggs.briggsdaily.commands;
 
-import briggs.briggsdaily.BriggsDaily;
 import briggs.briggsdaily.Config;
 import briggs.briggsdaily.Loot;
 import briggs.briggsdaily.PlayerCacheTracker;

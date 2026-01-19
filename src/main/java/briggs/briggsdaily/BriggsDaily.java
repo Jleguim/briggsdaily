@@ -22,7 +22,6 @@ public class BriggsDaily implements ModInitializer {
     // It is considered best practice to use your mod id as the logger's name.
     // That way, it's clear which mod wrote info, warnings, and errors.
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-    private static final SimpleCommandExceptionType NO_PLAYER = new SimpleCommandExceptionType(Component.literal("This command can only be run by players."));
 
     @Override
     public void onInitialize() {
