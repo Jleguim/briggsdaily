@@ -5,9 +5,13 @@ import briggs.briggsdaily.Loot;
 import briggs.briggsdaily.PlayerTracker;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
@@ -31,12 +35,24 @@ public class ClaimCommand {
                 .create(LootContextParamSets.EMPTY);
         List<ItemStack> results = table.getRandomItems(params);
 
-        context.getSource().sendSuccess(() -> Component.literal("Claimeaste tu daily! " + results), false);
-        PlayerTracker.recordClaim(player.getStringUUID());
+        MutableComponent out = Component.empty();
+        out.append(Component.literal("Claimeaste tu daily! "));
+
+        Component plus = Component.literal("\n+ ")
+                .setStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GREEN));
 
         for (ItemStack reward : results) {
+            HoverEvent hover = new HoverEvent.ShowItem(reward);
+
+            out.append(plus);
+            out.append(Component.literal(reward.toString())
+                    .setStyle(Style.EMPTY.withHoverEvent(hover).withColor(ChatFormatting.AQUA)));
+
             player.addItem(reward);
         }
+
+        context.getSource().sendSuccess(() -> out, false);
+        PlayerTracker.recordClaim(player.getStringUUID());
     }
 
     static int run(CommandContext<CommandSourceStack> context) {
