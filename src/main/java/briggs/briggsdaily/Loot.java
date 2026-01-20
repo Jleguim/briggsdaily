@@ -72,7 +72,7 @@ public class Loot {
             return;
         }
 
-        LootPool.Builder pool = LootPool.lootPool().setRolls(ConstantValue.exactly(1));
+        LootPool.Builder pool = LootPool.lootPool().setRolls(ConstantValue.exactly(Config.rewardsPerClaim()));
         if (config == null) config = new LootConfig();
 
         for (LootEntryConfig entry : config.entries) {
@@ -84,7 +84,7 @@ public class Loot {
 
             LootItem.Builder lootItemBuilder = LootItem.lootTableItem(stack.getItem())
                     .setWeight(entry.weight)
-                    .apply(SetItemCountFunction.setCount(ConstantValue.exactly(stack.getCount())));
+                    .apply(SetItemCountFunction.setCount(ConstantValue.exactly(entry.count)));
 
             stack.getComponents()
                     .forEach(comp -> applyComponent(lootItemBuilder, comp));
@@ -175,15 +175,15 @@ public class Loot {
         save();
     }
 
-    public static void editEntry(ItemStack stack, int index, int weight, int count, RegistryAccess registryAccess) {
-        if (config == null) config = new LootConfig();
-
-        LootEntryConfig target = config.entries.get(index);
-        target.weight = weight;
-        target.count = count;
-        target.stackJson = ItemStackSerializer.encode(stack, registryAccess);
-
-        updatePool(registryAccess);
-        save();
-    }
+//    public static void editEntry(ItemStack stack, int index, int weight, int count, RegistryAccess registryAccess) {
+//        if (config == null) config = new LootConfig();
+//
+//        LootEntryConfig target = config.entries.get(index);
+//        target.weight = weight;
+//        target.count = count;
+//        target.stackJson = ItemStackSerializer.encode(stack, registryAccess);
+//
+//        updatePool(registryAccess);
+//        save();
+//    }
 }

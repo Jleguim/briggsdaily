@@ -24,6 +24,16 @@ public class Config {
 
     private static void setDefaults() {
         props.setProperty("minimumPlaytime", "5");
+        props.setProperty("rewardsPerClaim", "1");
+    }
+
+    public static void setRewardsPerClaim(int n) {
+        props.setProperty("rewardsPerClaim", String.valueOf(n));
+        save();
+    }
+
+    public static int rewardsPerClaim() {
+        return Integer.parseInt(props.getProperty("rewardsPerClaim", "1"));
     }
 
     public static void setMinimumPlaytime(int n) {

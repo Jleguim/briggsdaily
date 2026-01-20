@@ -55,7 +55,11 @@ public class BriggsDailyCommand {
                                                 .executes(BriggsDailyCommand::replaceLoot)))))
                 .then(Commands.literal("playtime")
                         .then(Commands.argument("minutes", IntegerArgumentType.integer(0))
-                                .executes(BriggsDailyCommand::setPlaytime))));
+                                .executes(BriggsDailyCommand::setPlaytime)))
+                .then(Commands.literal("rewardsPerClaim")
+                        .then(Commands.argument("number", IntegerArgumentType.integer(1))
+                                .executes(BriggsDailyCommand::setRewardsPerClaim)))
+        );
     }
 
     static int addLoot(CommandContext<CommandSourceStack> context) {
@@ -106,6 +110,10 @@ public class BriggsDailyCommand {
                 out.append(line);
             }
             index++;
+        }
+
+        if (config.entries.isEmpty()) {
+            out.append(Component.literal("No loot entries available"));
         }
 
         context.getSource().sendSuccess(() -> out, false);
@@ -159,6 +167,14 @@ public class BriggsDailyCommand {
         int minutes = IntegerArgumentType.getInteger(ctx, "minutes");
         Config.setMinimumPlaytime(minutes);
         ctx.getSource().sendSuccess(() -> Component.literal("Minimum playtime set to " + minutes + " minutes."), false);
+        return 1;
+    }
+
+    private static int setRewardsPerClaim(CommandContext<CommandSourceStack> ctx) {
+        int number = IntegerArgumentType.getInteger(ctx, "number");
+        Config.setRewardsPerClaim(number);
+        Loot.updatePool(ctx.getSource().registryAccess());
+        ctx.getSource().sendSuccess(() -> Component.literal("Rewards per claim set to " + number + "."), false);
         return 1;
     }
 }
