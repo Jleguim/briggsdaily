@@ -3,13 +3,13 @@
   "id": "briggsdaily",
   "version": "${version}",
   "name": "BriggsDaily",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "Give your players daily rewards, with customizable loot.",
   "authors": [
-    "Me!"
+    "Jleguim"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://github.com/Jleguim/briggsdaily/",
+    "sources": "https://github.com/Jleguim/briggsdaily/"
   },
   "license": "CC0-1.0",
   "icon": "assets/briggsdaily/icon.png",
@@ -18,15 +18,14 @@
     "main": [
       "briggs.briggsdaily.BriggsDaily"
     ],
-    "client": [
-    ]
+    "client": []
   },
-  "mixins": [
-  ],
+  "mixins": [],
   "depends": {
     "fabricloader": ">=0.18.4",
     "minecraft": "~1.21.11",
     "java": ">=21",
-    "fabric-api": "*"
+    "fabric-api": "*",
+    "fabric-permissions-api-v0": "*"
   }
 }

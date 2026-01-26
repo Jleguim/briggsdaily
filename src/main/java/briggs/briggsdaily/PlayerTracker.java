@@ -25,6 +25,7 @@ public class PlayerTracker {
     public static class PlayerData {
         public String lastClaim;
         public String lastJoin;
+        public int claims;
     }
 
     public static void load() {
@@ -52,8 +53,15 @@ public class PlayerTracker {
             PlayerData pd = new PlayerData();
             pd.lastJoin = Instant.now().toString();
             pd.lastClaim = "Never";
+            pd.claims = 0;
             return pd;
         });
+    }
+
+    public static void resetClaims(String uuid) {
+        PlayerData pd = getOrCreate(uuid);
+        pd.claims = 0;
+        save();
     }
 
     public static void updateJoin(String uuid) {
@@ -62,9 +70,11 @@ public class PlayerTracker {
         save();
     }
 
-    public static void recordClaim(String uuid) {
+    public static PlayerData recordClaim(String uuid) {
         PlayerData pd = getOrCreate(uuid);
         pd.lastClaim = Instant.now().toString();
+        pd.claims++;
         save();
+        return pd;
     }
 }

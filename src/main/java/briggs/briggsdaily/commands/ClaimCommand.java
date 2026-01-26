@@ -5,6 +5,7 @@ import briggs.briggsdaily.Loot;
 import briggs.briggsdaily.PlayerTracker;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -13,7 +14,6 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -21,7 +21,8 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 public class ClaimCommand {
@@ -53,6 +54,7 @@ public class ClaimCommand {
 
         context.getSource().sendSuccess(() -> out, false);
         PlayerTracker.recordClaim(player.getStringUUID());
+
     }
 
     static int run(CommandContext<CommandSourceStack> context) {
@@ -64,7 +66,7 @@ public class ClaimCommand {
         assert player != null;
 
         PlayerTracker.PlayerData data = PlayerTracker.getOrCreate(player.getStringUUID());
-        boolean isOp = player.permissions().hasPermission(Permissions.COMMANDS_ADMIN);
+        boolean isOp = player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_ADMIN);
         // isOp =  context.getSource().getServer().getPlayerList().isOp(new NameAndId(player.getGameProfile()));
 
         if (isOp) {
@@ -87,16 +89,29 @@ public class ClaimCommand {
             return 1;
         }
 
-        Instant lastTime = Instant.parse(data.lastClaim);
-        Instant okTime = lastTime.plus(1L, ChronoUnit.DAYS);
+        if (Permissions.check(context.getSource(), "group.donator")) {
+            if (data.claims < 2) {
+                claimDaily(context, player);
+                return 1;
+            }
+        }
 
-        if (now.isAfter(okTime)) {
+        Instant lastTime = Instant.parse(data.lastClaim);
+        ZoneId zone = ZoneId.systemDefault();
+
+        LocalDate lastDate = lastTime.atZone(zone).toLocalDate();
+        LocalDate currentDate = LocalDate.now(zone);
+
+        if (!currentDate.equals(lastDate)) {
+            PlayerTracker.resetClaims(player.getStringUUID());
             claimDaily(context, player);
             return 1;
         }
 
-        Duration nextClaim = Duration.between(now, okTime);
-        context.getSource().sendFailure(Component.literal(String.format("Podrás claimear en %d hora(s).", nextClaim.toHours())));
+        LocalDate nextDate = lastDate.plusDays(1);
+        Instant nextClaim = nextDate.atStartOfDay(zone).toInstant();
+        Duration untilNextClaim = Duration.between(Instant.now(), nextClaim);
+        context.getSource().sendFailure(Component.literal(String.format("Podrás claimear en %d hora(s).", untilNextClaim.toHours())));
         return 1;
     }
 }
